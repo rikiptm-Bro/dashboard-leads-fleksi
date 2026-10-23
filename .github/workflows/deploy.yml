@@ -1,0 +1,40 @@
+name: Publikasikan dashboard
+
+on:
+  push:
+    branches: [main]
+    paths: ['data/**', 'site/**', 'build/**', '.github/workflows/**']
+  workflow_dispatch:   # jalankan manual setelah mengganti password
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install cryptography==43.0.3
+      - name: Enkripsi dashboard dengan password
+        env:
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+          DATA_PRIVATE_KEY: ${{ secrets.DATA_PRIVATE_KEY }}
+        run: python build/build.py
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
